@@ -55,7 +55,6 @@ const path = require('path');
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'index.html'));
 });
-});
 
 // API Routes
 app.use('/api/lock', lockRoutes);
