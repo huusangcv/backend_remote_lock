@@ -12,7 +12,7 @@ const connectDatabase = async () => {
   }
 
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_CONNECT_URL, {
+    const conn = await mongoose.connect("mongodb+srv://huusangcv:kGTksgkNiCW7Hrpy@newmovies.3nomdue.mongodb.net/newmovies?retryWrites=true&w=majority&appName=newmovies", {
       serverSelectionTimeoutMS: 5000,
     });
 
