@@ -1,0 +1,276 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Lock Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --surface-hover: #334155;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --success: #10b981;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --radius: 12px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem; display: flex; justify-content: center; }
+        .container { max-width: 800px; width: 100%; display: flex; flex-direction: column; gap: 1.5rem; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .header { text-align: center; margin-bottom: 1rem; }
+        .header h1 { font-size: 1.8rem; font-weight: 700; background: linear-gradient(to right, #60a5fa, #a78bfa); -webkit-background-clip: text; color: transparent; }
+        
+        .form-group { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+        label { font-size: 0.875rem; font-weight: 500; color: var(--text-muted); }
+        input, textarea { width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.95rem; outline: none; transition: all 0.2s; }
+        input:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+        
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; font-weight: 500; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s; color: white; font-size: 0.95rem; }
+        .btn-primary { background: var(--primary); }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-danger { background: var(--danger); }
+        .btn-danger:hover { background: var(--danger-hover); }
+        .btn-success { background: var(--success); }
+        .btn-success:hover { background: #059669; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .status-badge { display: inline-flex; padding: 0.5rem 1rem; border-radius: 99px; font-weight: 600; font-size: 0.875rem; align-items: center; gap: 0.5rem; }
+        .status-locked { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
+        .status-unlocked { background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.2); }
+        
+        .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+        .alert { padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: none; font-size: 0.9rem; }
+        .alert-error { background: rgba(239, 68, 68, 0.1); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .alert-success { background: rgba(16, 185, 129, 0.1); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.2); }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.875rem; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--text-muted); font-weight: 500; }
+        tr:hover { background: rgba(255, 255, 255, 0.02); }
+        .action-badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+        .action-LOCK { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+        .action-UNLOCK { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+        
+        .spinner { border: 2px solid rgba(255,255,255,0.1); border-left-color: white; border-radius: 50%; width: 1rem; height: 1rem; animation: spin 1s linear infinite; display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Remote Lock Controller</h1>
+            <p style="color: var(--text-muted); margin-top: 0.5rem; font-size: 0.9rem;">Admin Dashboard for Production Statistics Manager</p>
+        </div>
+
+        <div id="alertBox" class="alert"></div>
+
+        <div class="card">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Admin API Key</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="password" id="apiKey" placeholder="Enter your ADMIN_API_KEY to unlock features..." autocomplete="new-password">
+                    <button class="btn btn-primary" onclick="loadStatus()">Connect</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" id="statusCard" style="display: none; transition: all 0.3s;">
+            <div class="flex-between" style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border);">
+                <div>
+                    <h3 style="margin-bottom: 0.5rem;">Current Status</h3>
+                    <div id="statusBadge" class="status-badge status-unlocked">
+                        <span class="indicator">●</span> UNLOCKED
+                    </div>
+                </div>
+            </div>
+
+            <div id="lockForm" style="display: none;">
+                <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Lock Application</h3>
+                <div class="form-group">
+                    <label>Reason (Internal)</label>
+                    <input type="text" id="lockReason" placeholder="e.g. Maintenance, Overdue payment...">
+                </div>
+                <div class="form-group">
+                    <label>Message (Shown to users)</label>
+                    <textarea id="lockMessage" rows="3" placeholder="Ứng dụng đang bảo trì. Vui lòng thử lại sau."></textarea>
+                </div>
+                <button class="btn btn-danger" style="width: 100%; margin-top: 0.5rem;" onclick="performLock()">
+                    <div class="spinner" id="lockSpinner"></div>
+                    <span id="lockBtnText">Confirm Lock</span>
+                </button>
+            </div>
+            
+            <div id="unlockForm" style="display: none;">
+                <p style="color: var(--text-muted); margin-bottom: 1rem;">The application is currently locked. Users cannot access the system.</p>
+                <div class="form-group">
+                    <label>Lock Reason:</label>
+                    <div id="currentLockReason" style="padding: 0.75rem; background: var(--bg); border-radius: 8px; color: var(--danger);"></div>
+                </div>
+                <div class="form-group">
+                    <label>Lock Message:</label>
+                    <div id="currentLockMessage" style="padding: 0.75rem; background: var(--bg); border-radius: 8px; font-style: italic;"></div>
+                </div>
+                <button class="btn btn-success" style="width: 100%; margin-top: 1rem;" onclick="performUnlock()">
+                    <div class="spinner" id="unlockSpinner"></div>
+                    <span id="unlockBtnText">Unlock Application</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="card" id="historyCard" style="display: none;">
+            <div class="flex-between" style="margin-bottom: 1rem;">
+                <h3>Action History</h3>
+                <button class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="loadHistory()">Refresh</button>
+            </div>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Action</th>
+                            <th>Reason</th>
+                            <th>Performed By</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let isAppLocked = false;
+
+        function showAlert(msg, type = 'error') {
+            const box = document.getElementById('alertBox');
+            box.className = `alert alert-${type}`;
+            box.textContent = msg;
+            box.style.display = 'block';
+            setTimeout(() => box.style.display = 'none', 5000);
+        }
+
+        async function fetchAPI(endpoint, method = 'GET', body = null) {
+            const key = document.getElementById('apiKey').value;
+            const headers = { 'Content-Type': 'application/json' };
+            if (key) headers['X-API-Key'] = key;
+
+            try {
+                const res = await fetch(`${API_BASE}${endpoint}`, {
+                    method,
+                    headers,
+                    body: body ? JSON.stringify(body) : null
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || 'Request failed');
+                return data;
+            } catch (err) {
+                showAlert(err.message);
+                throw err;
+            }
+        }
+
+        async function loadStatus() {
+            try {
+                const data = await fetchAPI('/api/lock/status');
+                isAppLocked = data.data.isLocked;
+                
+                document.getElementById('statusCard').style.display = 'block';
+                document.getElementById('historyCard').style.display = 'block';
+                
+                const badge = document.getElementById('statusBadge');
+                if (isAppLocked) {
+                    badge.className = 'status-badge status-locked';
+                    badge.innerHTML = '<span class="indicator">●</span> LOCKED';
+                    
+                    document.getElementById('lockForm').style.display = 'none';
+                    document.getElementById('unlockForm').style.display = 'block';
+                    document.getElementById('currentLockReason').textContent = data.data.lockReason || 'N/A';
+                    document.getElementById('currentLockMessage').textContent = data.data.lockMessage || 'N/A';
+                } else {
+                    badge.className = 'status-badge status-unlocked';
+                    badge.innerHTML = '<span class="indicator">●</span> UNLOCKED';
+                    
+                    document.getElementById('lockForm').style.display = 'block';
+                    document.getElementById('unlockForm').style.display = 'none';
+                }
+                
+                if(document.getElementById('apiKey').value) {
+                    loadHistory();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function performLock() {
+            const reason = document.getElementById('lockReason').value;
+            const message = document.getElementById('lockMessage').value;
+            
+            document.getElementById('lockSpinner').style.display = 'inline-block';
+            document.getElementById('lockBtnText').textContent = 'Locking...';
+            
+            try {
+                await fetchAPI('/api/lock/lock', 'POST', { reason, message });
+                showAlert('Application locked successfully', 'success');
+                loadStatus();
+            } catch (err) {} finally {
+                document.getElementById('lockSpinner').style.display = 'none';
+                document.getElementById('lockBtnText').textContent = 'Confirm Lock';
+            }
+        }
+
+        async function performUnlock() {
+            document.getElementById('unlockSpinner').style.display = 'inline-block';
+            document.getElementById('unlockBtnText').textContent = 'Unlocking...';
+            
+            try {
+                await fetchAPI('/api/lock/unlock', 'POST', {});
+                showAlert('Application unlocked successfully', 'success');
+                loadStatus();
+            } catch (err) {} finally {
+                document.getElementById('unlockSpinner').style.display = 'none';
+                document.getElementById('unlockBtnText').textContent = 'Unlock Application';
+            }
+        }
+
+        async function loadHistory() {
+            try {
+                const data = await fetchAPI('/api/lock/history?limit=10');
+                const tbody = document.getElementById('historyTableBody');
+                tbody.innerHTML = '';
+                
+                if (data.data.history.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No history found</td></tr>';
+                    return;
+                }
+
+                data.data.history.forEach(item => {
+                    const tr = document.createElement('tr');
+                    const date = new Date(item.createdAt).toLocaleString();
+                    tr.innerHTML = `
+                        <td>${date}</td>
+                        <td><span class="action-badge action-${item.action}">${item.action}</span></td>
+                        <td>${item.reason || '-'}</td>
+                        <td>${item.performedBy}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                // Ignore history error if just checking status without key
+            }
+        }
+
+        // Try load status on boot
+        loadStatus();
+    </script>
+</body>
+</html>

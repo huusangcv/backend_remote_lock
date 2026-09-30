@@ -51,13 +51,10 @@ app.use((req, res, next) => {
 app.use(express.json());
 
 // Health check route
+const path = require('path');
 app.get('/', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Remote Lock API is running',
-    version: '1.0.0',
-    timestamp: new Date().toISOString(),
-  });
+  res.sendFile(path.join(__dirname, 'views', 'index.html'));
+});
 });
 
 // API Routes
